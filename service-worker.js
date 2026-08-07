@@ -45,11 +45,7 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(res => {
 
       if (res) {
-		if (self.navigator.onLine && event.request.url.includes('script.google.com')) {
-		  
-		} else {		
-		  return res;
-		}
+		return res;
 	  }
 
       // 沒有快取，去網路拿，拿到後存起來
