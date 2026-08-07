@@ -659,12 +659,21 @@ async function decryptMasterKey(encryptedBase64, userKey) {
 		const authData = await authRes.json();
 
 		if (!authData.success) {
-		  if (authData.message === 'invalid key') {
-			localStorage.removeItem('examKey');
+		  if (authData.message === 'offline') {
+			// 離線，用 localStorage 的 masterKey
+			masterKey = localStorage.getItem('masterKey');
+			if (!masterKey) {
+			  alert('離線且無本地金鑰，請先連線一次');
+			  return;
+			}
+		  } else {
+			if (authData.message === 'invalid key') {
+			  localStorage.removeItem('examKey');
+			}
+			document.getElementById('auth-error').style.display = 'block';
+			document.getElementById('auth-overlay').style.display = 'flex';
+			return;
 		  }
-		  document.getElementById('auth-error').style.display = 'block';
-		  document.getElementById('auth-overlay').style.display = 'flex';
-		  return;
 		}
 
 		localStorage.setItem('examKey', userKey);
