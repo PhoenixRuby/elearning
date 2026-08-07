@@ -1,7 +1,7 @@
 let CACHE_NAME = 'elearning-v1'; // 預設值，啟動後會更新
 
 const FILES = [
-  './index.htm',
+  
   './manifest.json',
   './version.json'
 ];
@@ -37,6 +37,18 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  if (event.request.url.includes('script.google.com')) {
+    event.respondWith(fetch(event.request).catch(() => {
+      return new Response(JSON.stringify({ success: false, message: 'offline' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }));
+    return;
+  }
+  
+  // 排除非 http/https 請求
+  if (!event.request.url.startsWith('http')) return;
+  
   event.respondWith(
     caches.match(event.request).then(res => {
       if (res) return res;
