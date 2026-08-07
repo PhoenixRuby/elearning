@@ -1,4 +1,6 @@
 Scripts/Exam/*.json
 Scripts/Exam/*.js
 *.bak
+*.hash
 encrypt.js
+.env
