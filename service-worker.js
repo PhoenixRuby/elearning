@@ -38,13 +38,17 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.url.includes('script.google.com')) {
-    event.respondWith(fetch(event.request).catch(() => {
-      return new Response(JSON.stringify({ success: false, message: 'offline' }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }));
-    return;
-  }
+	  if (!self.navigator.onLine) {
+		event.respondWith(
+		  new Response(JSON.stringify({ success: false, message: 'offline' }), {
+			headers: { 'Content-Type': 'application/json' }
+		  })
+		);
+	  } else {
+		event.respondWith(fetch(event.request));
+	  }
+	  return;
+	}
   
   // 排除非 http/https 請求
   if (!event.request.url.startsWith('http')) return;
