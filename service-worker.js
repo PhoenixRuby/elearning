@@ -1,7 +1,7 @@
 let CACHE_NAME = 'elearning-v1'; // 預設值，啟動後會更新
 
 const FILES = [
-  
+  './index.htm',
   './manifest.json',
   './version.json'
 ];
