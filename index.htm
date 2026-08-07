@@ -695,9 +695,13 @@ async function decryptMasterKey(encryptedBase64, userKey) {
 
 	} catch (err) {
 	  console.error('載入失敗', err);
-	  localStorage.removeItem('examKey');
-	  document.getElementById('auth-error').style.display = 'block';
-	  document.getElementById('auth-overlay').style.display = 'flex';
+	  if (err.name === 'TypeError' && err.message.includes('fetch')) {
+		// 網路問題，不清除 key
+	  } else {
+		localStorage.removeItem('examKey');
+		document.getElementById('auth-error').style.display = 'block';
+		document.getElementById('auth-overlay').style.display = 'flex';
+	  }
 	}
 })();
 </script>
