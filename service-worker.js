@@ -37,25 +37,20 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.url.includes('script.google.com')) {
-	  if (!self.navigator.onLine) {
-		event.respondWith(
-		  new Response(JSON.stringify({ success: false, message: 'offline' }), {
-			headers: { 'Content-Type': 'application/json' }
-		  })
-		);
-	  } else {
-		event.respondWith(fetch(event.request));
-	  }
-	  return;
-	}
-  
+
   // 排除非 http/https 請求
   if (!event.request.url.startsWith('http')) return;
   
   event.respondWith(
     caches.match(event.request).then(res => {
-      if (res) return res;
+
+      if (res) {
+		if (self.navigator.onLine && event.request.url.includes('script.google.com')) {
+		  
+		} else {		
+		  return res;
+		}
+	  }
 
       // 沒有快取，去網路拿，拿到後存起來
       return fetch(event.request).then(response => {
