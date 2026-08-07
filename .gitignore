@@ -1,0 +1,4 @@
+Scripts/Exam/*.json
+Scripts/Exam/*.js
+*.bak
+encrypt.js

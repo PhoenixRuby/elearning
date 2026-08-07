@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="Css/animate.css" rel="stylesheet"/>
+<link href="Css/base.css" rel="stylesheet"/>
+<link href="Css/css-light.css" rel="stylesheet"/>
+<link href="Css/font-awesome.css" rel="stylesheet"/>
+<link href="Css/fonts/all.min.css" rel="stylesheet"/>
+<link href="Css/book.css" rel="stylesheet"/>
+<link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js');
+  }
+</script>
+</head>
+<title>eLearning - Search Tools</title>
+<script src="Scripts/jquery-3.5.1.min.js"></script>
+<script src="Scripts/jquery-ui-1.12.1.min.js"></script>
+<script src="Scripts/jquery.easing.1.3.js"></script>
+<script src="Scripts/jquery.nicescroll.js"></script>
+<script src="Scripts/moment.js"></script>
+<script src="Scripts/flipTimer.js"></script>
+
+<script src="Scripts/turn.min.js"></script>
+<script src="Scripts/zoom.min.js"></script>
+<script src="Scripts/turnbook.js"></script>
+<script src="Scripts/showdown.min.js"></script>
+<script src="Scripts/highlight.pack.js"></script>
+<script src="Scripts/highlightjs-line-numbers.min.js"></script>
+<script src="Scripts/clipboard.min.js"></script>
+<script src="Scripts/html2pdf.bundle.min.js"></script>
+<script src="Scripts/pdf-lib.min.js"></script>
+<link rel="shortcut icon" href="favicon.png" type="image/x-icon" />
+<body>
+<div id="main" class="angle">
+	<div class="angletheme"><span data-button="theme" data-theme="light"><span></span><span></span></span></div>
+	<ol class="switch-filter">
+		<!--<li data-filter="search" class="selected"><i class="fa fa-search"></i></li>
+		<li data-filter="study"><i class="fa fa-book"></i></li>
+		<li data-filter="tqccsharp"><i class="fa fa-csharp"></i></li>
+		<li data-filter="tqcjava"><i class="fa fa-java"></i></li>
+		<li data-filter="tqcpython"><i class="fa fa-python"></i></li>
+		<li data-filter="tqcpythonweb"><i class="fa fa-pythonweb"></i></li>
+		<li data-filter="tqcr"><i class="fa fa-r"></i></li>-->
+	</ol>
+	<div data-box="schedule">
+		<div data-count="0" data-total="0">
+			<span data-bar="flashlight"></span>
+		</div>
+		<label data-info="DownloadInfo"></label>
+	</div>
+	<div id="search_panel" class="panel" data-panel="tqc">
+		<span class="ribbon"><span>搜尋</span></span>
+		<div class="search_ani"><div></div></div>
+		<h1>eLearning</h1>
+		<div data-clock="clock"></div>
+		<div data-panel="optionbg"></div>
+		<div id="query" class="loading">
+			<div data-panel="query"><input type="text" id="question" placeholder="請輸入關鍵字" required /><label></label><a data-button="clear"></a></div><a data-button="setting" href="#">...<span id="target_count"></span></a>
+			<div data-panel="option">
+				<ul data-panel="menulist"></ul>
+				<ul data-panel="checklist"></ul>
+			</div>
+			<ul data-panel="hintlist"></ul>
+		</div>
+		<div id="search_result"></div>
+		<div id="answer"></div>
+		<div id="answerall">
+		
+		</div>
+	</div>
+	<!--
+	<div id="${panelInfo[0]}_panel" class="panel" data-panel="tqc">
+		<span class="ribbon"><span>${panelInfo[1]}</span></span>
+		<div class="search_ani"><div></div></div>
+		<h1>${panelInfo[2]}</h1>
+		<div data-clock="clock"></div>
+		<ol class="result-filter">
+			<li data-filter="list" class="selected"><i class="fa fa-th-list"></i></li>
+			<li data-filter="book"><i class="fa fa-book-open"></i></li>
+		</ol>
+		<div class="turnbook-viewport">
+			<div class="container">
+				<div class="turnbook">
+					<div ignore="1" class="next-button"></div>
+					<div ignore="1" class="previous-button"></div>
+				</div>
+			</div>
+		</div>
+		<div data-panel="bookwall"></div>
+	</div>
+	-->
+</div>
+<div class="angleshadow"></div>
+<div data-version="2026.08.07"></div>
+<div data-help>
+<ul>
+	<li><label>star</label> 流星雨 +30秒顯示</li>
+	<li><label>rocket</label> 煙火 +10秒顯示</li>
+	<li><label>dark</label> 夜晚模式</li>
+	<li><label>light</label> 白天模式</li>
+	<li><label>cls</label>, <label>clear</label> 清除搜尋文字</li>
+	<li><label data-key="ctrl"></label>+ <label>v</label> 貼上複製的文字到搜尋框</li>
+	<li><label>cloud</label>, <label data-key="shift"></label>+ <label>c</label> 召喚白雲</li>
+	<li><label>nocloud</label>, <label data-key="shift"></label>+ <label>n</label> 關閉白雲</li>
+    <li><label data-key="shift"></label>+ <label>+</label> 放大一級字體</li>
+	<li><label data-key="shift"></label>+ <label>-</label> 縮小一級字體</li>
+	<li><label>set</label> 下拉搜尋設定</li>
+	<li><label data-key="esc"></label> 關閉下拉、關閉流星雨</li>
+	<li><label>search</label> 將錨點移至搜尋框</li>
+</ul>
+</div>
+<div class="gotop"></div>
+<div data-album="book">
+	<div class="albuminfo">
+		<label></label>
+		<span></span>
+	</div>
+	<a href="#" class="albumclose"></a>
+
+	<div class="turnbook-viewport">
+		<div class="container">
+			<div class="turnbook">
+				<div ignore="1" class="next-button"></div>
+				<div ignore="1" class="previous-button"></div>
+			</div>
+		</div>
+	</div>
+	<div class="album"><ul data-page="pagination" data-nowpage="1"></ul></div>
+</div>
+<div data-album="pdf">
+	<div class="albuminfo">
+		<label></label>
+		<span></span>
+	</div>
+	<a href="#" class="albumclose"></a>
+	
+	<div data-box="schedule">
+		<div data-count="0" data-total="0">
+			<span data-bar="flashlight"></span>
+		</div>
+		<label data-info="remainingDownloadTime"></label>
+		<label data-info="DownloadInfo"></label>
+	</div>
+</div>
+<div id="auth-overlay">
+  <div id="auth-box">
+    <div>🔐</div>
+    <h2>eLearning</h2>
+    <p>請輸入授權金鑰</p>
+    <input id="auth-input" type="password" placeholder="授權金鑰">
+    <button id="auth-btn">確認</button>
+    <p id="auth-error">金鑰無效，請重新輸入</p>
+  </div>
+</div>
+<script src="Scripts/cloud.js"></script>
+<script src="Scripts/countUp.js"></script>
+<script src="Scripts/index.js"></script>
+<script>
+//var theme = location.hash;
+//if (theme == null || theme == '') {
+//	theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+//}
+//switch_theme(theme);
+// 嘗式從 local storage 抓取題庫總量
+var eLearning = geteLearning();
+var resizeTimer;
+var clipboard;
+const eLearningCopy = cloneDeep(eLearning);
+
+switch_theme(eLearningCopy.theme);
+eLearningCopy.load.speed = Math.floor(eLearningCopy.load.speed * 2 / 3);
+localStorage.setItem('eLearning', JSON.stringify(eLearningCopy));
+
+$('#main [data-box="schedule"] div[data-total]').attr('data-total', eLearning.quizTotal);
+
+$(document).ready(function(e){
+	buildPdfIframe();
+	var panelsToGenerate = [
+		['search', '搜尋', 'eLearning', 'fa-search', true, ''],
+		['study', '學習', 'eStuding', 'fa-book', true, ''],
+		['tqccsharp', 'C#7', 'TQC+ C#7 Exercise', 'fa-csharp', true, 'csharp'],
+		['tqcjava', 'Java', 'TQC+ Java Exercise', 'fa-java', true, 'eclipse'],
+		['tqcpython', 'Python', 'TQC+ Python Exercise', 'fa-python', true, 'python'],
+		['tqcpythonweb', 'Python', 'TQC+ Python Web Exercise', 'fa-pythonweb', true, 'python'],
+		['tqcr', 'R', 'TQC+ R Exercise', 'fa-r', false, 'r']
+	];
+	
+	generatePanels(panelsToGenerate);
+	var panelIds = panelsToGenerate.filter(function(panel) {
+		return panel[4] === true; // 先篩選第四個值為true的項目
+	}).map(function(panel) {
+		return panel[0]; // 然後從篩選後的項目中提取第一個元素
+	});
+	
+	setupClocks(...panelIds);
+	//setupClocks('search_panel', 'study_panel', 'tqccsharp_panel', 'tqcjava_panel', 'tqcpython_panel', 'tqcpythonweb_panel', 'tqcr_panel');
+	
+	generateSwitchFilter(panelsToGenerate, function (){
+		checkScheduleDisplay();
+	});
+
+	$('.switch-filter li').click(function(){
+		var newPage = $(this).index();
+		var oldPage = $('.switch-filter li.selected').index();
+		
+		if (newPage != oldPage){
+			if ($(this).attr('data-filter') == 'search'){
+				if ($('#query a[data-button="setting"]').hasClass('selected')){
+					$('#query a[data-button="setting"]').trigger('click');
+				}
+			}
+			var movePage = newPage > oldPage ? 'goleft': 'goright';
+			var panelId = $('.panel.selected').attr('id');
+			document.title = $('#' + $(this).attr('data-filter') + '_panel h1').first().text() + ' - Search Tools';
+			var filter = $(this).attr('data-filter');
+			$('.switch-filter li').removeClass('selected');
+			//$('.panel').css('display','block').removeClass('selected').attr('data-movepage', movePage).delay(400).css('display','none');
+			$('#' + panelId).css({'display':'block', 'position':'absolute', 'top': 52}).removeClass('selected').attr('data-movepage', movePage).animate({'opacity':0}, 400, function(){
+				$(this).removeAttr('style');//.css({'opacity': 1, 'display':'none', 'position':'relative'});
+			});
+			$(this).addClass('selected');
+			$('#' + $(this).attr('data-filter') + '_panel').css('display', 'block').addClass('selected').attr('data-movepage', movePage);
+			resizeViewport();
+			$('.switch-filter').trigger('goclick', $(this).find('a'));
+			
+			setTimeout(function(){
+				resize_all();
+			}, 800);
+		}
+	});
+
+    $('span[data-button="theme"]').click(function () {
+        var theme = $(this).attr('data-theme');
+
+		switch (theme) {
+			case 'dark':
+			case '#dark':
+				theme = 'light';
+				break;
+			case 'light':
+			case '#light':
+				theme = 'dark';
+				break;
+		}
+		
+			
+		switch_theme(theme, function (){
+			const existingIframe = document.getElementById('pdfiframe');
+			if (existingIframe) {
+				$('[data-filter="download"]').removeClass('disabled').addClass('disabled');
+				existingIframe.parentNode.removeChild(existingIframe);
+				buildPdfIframe();
+			}
+		});
+    })
+	
+	
+	$('.angletheme').hover(() =>{
+		$('.angle').attr('data-action', 'over');
+	}, () => {
+		$('.angle').attr('data-action', 'blur');
+	});
+	
+	$('body').niceScroll({ horizrailenabled: false });
+	
+	$('[data-panel="optionbg"],#answer').click(function(){	
+		if ($('[data-button="setting"]').attr('class') == 'selected'){
+			$('[data-button="setting"]')[0].click();
+		}				
+	});
+	
+	$('#query a[data-button="setting"]').unbind('click');
+	$('#query a[data-button="setting"]').bind('click', function(e){
+		e.preventDefault();
+		
+		var zoomsize = 1.0;
+		switch($('body').attr('data-size')){
+			case '2':
+				zoomsize = 1.2;
+			break;
+			case '3':
+				zoomsize = 1.4;
+			break;
+		}
+		var w = $('body').width();
+
+		$('[data-panel="option"]').css({ 'width': w / zoomsize - 43 / zoomsize});
+		var _menu = '#query ul[data-panel="menulist"]';
+		var _target = '#query ul[data-panel="checklist"]';
+		var _this = $(this);
+		if ($(_this).hasClass('selected')){
+			$(_target + ' > li').stop().clearQueue().removeAttr('style');
+			$(_target + ' > li > ol > li').stop().clearQueue();
+			$(_target).stop().clearQueue().slideUp('fast', function(){
+				$(_this).removeClass('selected');
+				$(_target).removeAttr('style');
+				$(_menu).css('height', 0);
+			});
+		} else {
+			$(_target).css('height', 0);
+			$(_this).addClass('selected');
+			$(_target).stop().clearQueue().slideDown('fast', function(){
+				resize_all_quicksand();
+			});
+		}
+	});
+	$('#query a[data-button="clear"]').unbind('click');
+	$('#query a[data-button="clear"]').bind('click', function(e){
+		e.preventDefault();
+		$('#question').val('').trigger('keyup');
+	});
+	
+	// 自訂 網頁HEADER顯示系統日期 navbar LocalSysDateTime
+	//date = moment(new Date())
+	
+	$('.search_ani').click(function(e){
+		var num = 1;
+		var loop = true;
+		if (typeof(e) != 'undefined' && typeof(e.key) != 'undefined'){
+			num = e.key;
+			loop = false;
+		}
+		
+		var size = parseInt($('body').attr('data-size') ?? '1');
+		size = parseInt(size) + num;
+		if(size > 3){
+			if (loop){
+				size = 1;
+			} else {
+				size = 3;
+			}
+		} else if (size < 1){
+			if (loop){
+				size = 2;
+			} else {
+				size = 1;
+			}
+		}
+		
+		$('body').attr('data-size', size);	
+		resize_all();
+	});
+
+	const target = document.querySelector('body');
+	target.addEventListener('paste', (event) => {
+		// 如果 popup 顯示中，不劫走
+		if (document.getElementById('auth-overlay').style.display !== 'none') return;
+		event.preventDefault();
+		var isInputFocused = $('input, textarea, [contenteditable="true"]').is(':focus');
+		let paste = (event.clipboardData || window.clipboardData).getData('text');
+		
+		if ($('.switch-filter li.selected').index() !== 0){
+			$('.switch-filter li').first().click();
+		}
+				
+		if (!isInputFocused){
+			
+			if (paste.includes('\n')) {
+				parseText(paste);
+			} else {
+				parseText(paste);
+				$('#question').val(paste);//.trigger('keyup');
+			}
+		} else {
+			parseText(paste);
+			$('#question').val(paste);//.trigger('keyup');
+		}
+	});
+	
+	konami();
+	
+	$('.gotop').click(() => {
+	  $('html,body').animate({
+		scrollTop: 0
+	  }, 'fast');
+	})
+
+
+	function setupResultFilterPanels(...panelIds) {
+		panelIds.forEach(panel => {
+	        var panelId = panel.startsWith('#') || panel.startsWith('.') ? panel : `#${panel}`;
+			var targetbook = '[data-album="book"]';
+			$(panelId + ' .result-filter li').click(function() {
+				var filter = $(this).attr('data-filter');
+				$(panelId + ' .result-filter li').removeClass('selected');
+				$(this).addClass('selected');
+
+				if(filter == 'book'){
+					$(panelId + ' .result-filter li[data-filter="book"]').css('display','inline-block');
+				} else {
+					$(panelId + ' .result-filter li[data-filter="book"]').css('display','none');
+				}		
+			});
+		});
+	}
+
+	setupResultFilterPanels('study_panel', 'tqccsharp_panel', 'tqcjava_panel', 'tqcpython_panel', 'tqcpythonweb_panel', 'tqcr_panel');
+$(window).resize(function() {
+	resize_all();
+}).bind('orientationchange', function() {
+	resize_all();
+});	
+
+function resize_all(){
+	resize_all_quicksand();
+	if ($('#rocketarea').hasClass('rocket')){
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+	}
+	resize_tab_menu('#answer');
+	resizeViewport();
+	reisze_allbook();
+	
+	clearTimeout(resizeTimer);
+	resizeTimer = setTimeout(function(){
+		resize_tab_menu('#answer');
+	}, 400);
+}
+
+$(window).scroll(function() {
+  var h = $(window).scrollTop();
+  if (h > 200 && $('body').height() > 700){//1100) {
+    $('.gotop').stop().clearQueue().fadeIn('fast');
+	
+	if ($('#search_panel').css('display') == 'block'){
+		if ($('#main').hasClass('popup') == false){
+			$('#main').removeClass('popup').addClass('popup');
+			$('#query').removeClass('loading').removeClass('animated').addClass('animated');
+			$('#search_ani').removeClass('animated').addClass('animated');
+			$('[data-button="theme"]').removeClass('animated').addClass('animated');
+		}
+	} else {
+		$('#main').removeClass('popup');
+	}
+  }
+  else {
+    $('.gotop').stop().clearQueue().fadeOut('fast');
+	
+	if ($('#search_panel').css('display') == 'block'){
+		if ($('#main').hasClass('popup')){
+			$('#main').removeClass('popup').removeClass('close').addClass('close');
+			setTimeout(function(){
+				$('#main').removeClass('close');
+				$('#query').removeClass('animated');
+				$('#search_ani').removeClass('animated');
+				$('[data-button="theme"]').removeClass('animated');
+			},300);
+		}
+	} else {
+		$('#main').removeClass('popup');
+		}
+	  }
+	})
+});
+
+</script>
+<script>
+//var menulist = [{"type":"tpipas,pic,it,general,new,2023,2022,2021,2020","title":"全部"},{"type":"tpipas","title":"TPIPAS"},{"type":"pic","title":"PIC"},{"type":"it","title":"IT"},{"type":"general,2020,2021,2022,2023","title":"全部通識"},{"type":"2023","title":"通識2023"},{"type":"2022","title":"通識2022"},{"type":"2021,2020","title":"通識2020~2021"},{"type":"new","title":"新進"}];
+var menulist = [{"type":"tpipas","title":"TPIPAS"},{"type":"pic","title":"PIC"},{"type":"it","title":"IT"},{"type":"pg","title":"PG"},{"type":"sa","title":"SA"},{"type":"general,2020,2021,2022,2023,2024,2025,2026","title":"全部通識"},{"type":"2026","title":"通識2026"},{"type":"2025","title":"通識2025"},{"type":"2020,2021,2022,2023,2024","title":"通識2020~2024"},{"type":"new","title":"新進"},{"type":"de","title":"個人資料保護法"}];
+var datalist = [];
+var tmpdata = [];
+var tqclist = [];
+
+menulist.unshift({"type": [...new Set(menulist.flatMap(item => item.type.split(',')))].join(','), "title": "全部"});
+
+MathJax = {
+  loader: {
+    load: ['input/asciimath', 'input/tex-base', 'output/svg', 'ui/menu', '[tex]/require']
+  },
+  startup: {
+    pageReady: function () {
+      //
+      // Synchronize menu renderer item with on-screen popup menu
+      //
+	  var renderer = MathJax.startup.document.menu.settings.renderer;
+        var menu = MathJax.startup.document.menu.menu;
+        var item = (menu.getPool ? menu.getPool() : menu.pool).lookup('renderer');
+		item.setValue('SVG'); // SVG / CHTML
+      
+        //
+        //  Set up processing of input content
+        //
+        //var input = document.getElementById('MathInput');
+        //var output = document.getElementById('MathPreview');
+        //var button = document.getElementById('renderHTML');
+        //output.innerHTML = input.value.trim();
+		//console.log('load mathjax');
+        window.typesetInput = function (target) {
+          //button.disabled = true;
+          //output.innerHTML = input.value.trim();
+          MathJax.texReset();
+          MathJax.typesetClear();
+          MathJax.typesetPromise([target]).catch(function (err) {
+            //output.innerHTML = '';
+            //output.appendChild(document.createTextNode(err.message));
+            console.error(err);
+          }).then(function () {
+            //button.disabled = false;
+          });
+        }
+        //input.oninput = typesetInput;
+      
+
+      return MathJax.startup.defaultPageReady();
+    }
+  },
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+	processEscapes: true
+  }
+  /*,
+  svg: {
+    fontCache: 'global'
+  },
+  options: {
+    skipHtmlTags: [            //  HTML tags that won't be searched for math
+        'script', 'noscript', 'style', 'textarea', 'pre',
+        'code', 'annotation', 'annotation-xml'
+    ],
+    includeHtmlTags: {         //  HTML tags that can appear within math
+        br: '\n', wbr: '', '#comment': ''
+    },
+    ignoreHtmlClass: '.*',    //  class that marks tags not to search
+    processHtmlClass: 'tqcbody',  //  class that marks tags that should be searched
+    compileError: function (doc, math, err) {doc.compileError(math, err)},
+    typesetError: function (doc, math, err) {doc.typesetError(math, err)},
+    
+  }*/
+};
+
+</script>
+<script id="MathJax-script" src="Scripts/tex-mml-chtml.js"></script>
+
+<script src="Scripts/crypto-js.min.js"></script>
+
+<script>
+(async function() {
+  // 從 localStorage 拿 key，沒有就要求輸入
+  let userKey = localStorage.getItem('examKey');
+  console.log('userKey:', userKey);
+
+if (!userKey) {
+  userKey = await new Promise(resolve => {
+    const overlay = document.getElementById('auth-overlay');
+    const input = document.getElementById('auth-input');
+    const btn = document.getElementById('auth-btn');
+    
+    overlay.style.display = 'flex';
+    input.focus();
+    
+    const confirm = () => {
+      if (input.value.trim()) resolve(input.value.trim());
+    };
+    
+    btn.addEventListener('click', confirm);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') confirm(); });
+  });
+  localStorage.setItem('examKey', userKey);
+  document.getElementById('auth-overlay').style.display = 'none';
+}
+
+  async function decrypt(encryptedText, password) {
+	  const [saltHex, ivHex, authTagHex, encryptedHex] = encryptedText.split(':');
+	  
+	  const salt = hexToBytes(saltHex);
+	  const iv = hexToBytes(ivHex);
+	  const authTag = hexToBytes(authTagHex);
+	  const encryptedData = hexToBytes(encryptedHex);
+	  
+	  // authTag 接在密文後面
+	  const combined = new Uint8Array(encryptedData.length + authTag.length);
+	  combined.set(encryptedData);
+	  combined.set(authTag, encryptedData.length);
+	  
+	  const keyMaterial = await crypto.subtle.importKey(
+		'raw',
+		new TextEncoder().encode(password),
+		'PBKDF2',
+		false,
+		['deriveKey']
+	  );
+	  
+	  const key = await crypto.subtle.deriveKey(
+		{ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+		keyMaterial,
+		{ name: 'AES-GCM', length: 256 },
+		false,
+		['decrypt']
+	  );
+	  
+	  const decrypted = await crypto.subtle.decrypt(
+		{ name: 'AES-GCM', iv, tagLength: 128 },
+		key,
+		combined
+	  );
+	  
+	  return new TextDecoder().decode(decrypted);
+	}
+
+  function hexToBytes(hex) {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    }
+    return bytes;
+  }
+  
+  function expandFileList(list) {
+  const result = [];
+  for (const item of list) {
+    const match = item.match(/^(\d+)-(\d+)$/);
+    if (match) {
+      const start = parseInt(match[1]);
+      const end = parseInt(match[2]);
+      const pad = match[1].length; // 保留前導零位數
+      for (let i = start; i <= end; i++) {
+        result.push(String(i).padStart(pad, '0'));
+      }
+    } else {
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+async function decryptMasterKey(encryptedBase64, userKey) {
+  const SALT = 'elearning-fixed-salt';
+  
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(userKey),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const keyBytes = new Uint8Array(
+    await crypto.subtle.sign('HMAC', keyMaterial, new TextEncoder().encode(SALT))
+  );
+  
+  const encryptedBytes = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+  
+  const decrypted = encryptedBytes.map((b, i) => b ^ keyBytes[i % keyBytes.length]);
+  
+  // 轉回 hex 字串
+  return Array.from(decrypted).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+  const BASE_URL = './Scripts/Exam/';
+	const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyHorgF6GKvaoeTcrj6BCW_VCHPKaF2VhKt3OClVRL7ooxLCSlKgFoi3UyBKd8veIG15Q/exec';
+
+	try {
+	  // 先驗證 user key，取得 master key
+	  const authRes = await fetch(`${APPS_SCRIPT_URL}?key=${encodeURIComponent(userKey)}`);
+		const authData = await authRes.json();
+
+		if (!authData.success) {
+		  localStorage.removeItem('examKey');
+		  document.getElementById('auth-error').style.display = 'block';
+		  document.getElementById('auth-overlay').style.display = 'flex';
+		  return;
+		}
+
+		localStorage.setItem('examKey', userKey);
+
+		// 解密 master key
+		const masterKey = await decryptMasterKey(authData.data, userKey);
+
+	  // 先抓 init.enc 拿清單
+	  const initRes = await fetch(BASE_URL + 'init.enc');
+	  const initEncrypted = await initRes.text();
+	  const initDecrypted = await decrypt(initEncrypted, masterKey);  // ← userKey 改成 masterKey
+	  const fileList = expandFileList(JSON.parse(initDecrypted));
+
+	  // 逐一載入 .enc
+	  for (const file of fileList) {
+		const res = await fetch(BASE_URL + file + '.enc');
+		const encryptedText = await res.text();
+		const decrypted = await decrypt(encryptedText, masterKey);  // ← userKey 改成 masterKey
+		const data = JSON.parse(decrypted);
+		if (data.filetype) {
+		  simulateDownload(data.list, data.filetype);
+		} else {
+		  simulateDownload(data);
+		}
+	  }
+
+	  simulateDownload();
+
+	} catch (err) {
+	  console.error('載入失敗', err);
+	  localStorage.removeItem('examKey');
+	  document.getElementById('auth-error').style.display = 'block';
+	  document.getElementById('auth-overlay').style.display = 'flex';
+	}
+})();
+</script>
+</body>
+</html>
