@@ -95,7 +95,7 @@
 	-->
 </div>
 <div class="angleshadow"></div>
-<div data-version="2026.08.07"></div>
+<div id="feedback-btn" data-version="2026.08.07"></div>
 <div data-help>
 <ul>
 	<li><label>star</label> 流星雨 +30秒顯示</li>
@@ -154,6 +154,56 @@
     <input id="auth-input" type="password" placeholder="授權金鑰">
     <button id="auth-btn">確認</button>
     <p id="auth-error">金鑰無效，請重新輸入</p>
+  </div>
+</div>
+
+<div id="feedback-overlay" aria-hidden="true">
+  <div id="feedback-sheet">
+    <div id="feedback-header">
+      <span id="feedback-title">題庫回饋</span>
+      <button id="feedback-close" type="button" aria-label="關閉">✕</button>
+    </div>
+
+    <div id="feedback-body">
+      <!-- 說明區（固定在上方） -->
+      <details id="feedback-example">
+        <summary>📋 貼上格式範例（點開查看）</summary>
+        <div id="feedback-example-inner">
+          <pre>主題名稱
+
+題目一的文字
+選項A
+選項B
+*正確選項
+選項D
+
+題目二的文字
+*正確選項
+選項B
+選項C</pre>
+          <p class="feedback-hint">• 第一行為主題，之後每個題目以空行分隔<br>• 選項前加 <code>*</code> 代表正確答案<br>• 多個 <code>*</code> 代表複選題</p>
+        </div>
+      </details>
+
+      <!-- 輸入 + 預覽並排 -->
+      <div id="feedback-columns">
+        <div id="feedback-left">
+          <div class="col-label">貼上題庫</div>
+          <textarea id="feedback-input" placeholder="將題庫文字貼在這裡..." spellcheck="false"></textarea>
+        </div>
+        <div id="feedback-right">
+          <div class="col-label">解析預覽</div>
+          <div id="feedback-preview" aria-live="polite">
+            <div class="preview-empty">貼上內容後自動顯示</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="feedback-footer">
+      <span id="feedback-status"></span>
+      <button id="feedback-submit" type="button" disabled>送出</button>
+    </div>
   </div>
 </div>
 <script src="Scripts/cloud.js"></script>
@@ -657,8 +707,6 @@ async function decryptMasterKey(encryptedBase64, userKey) {
 	  // 先驗證 user key，取得 master key
 	  const authRes = await fetch(`${APPS_SCRIPT_URL}?key=${encodeURIComponent(userKey)}`);
 		const authData = await authRes.json();
-		console.log('xxxxxxxxxxxxxxxxxxxxxxxxxx');
-        console.log(authData);
 		
 		if (!authData.success) {
 		  if (authData.message === 'offline') {
@@ -708,6 +756,187 @@ async function decryptMasterKey(encryptedBase64, userKey) {
 	  //document.getElementById('auth-error').style.display = 'block';
 	  //document.getElementById('auth-overlay').style.display = 'flex';
 	}
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyHorgF6GKvaoeTcrj6BCW_VCHPKaF2VhKt3OClVRL7ooxLCSlKgFoi3UyBKd8veIG15Q/exec';
+
+  const overlay  = document.getElementById('feedback-overlay');
+  const sheet    = document.getElementById('feedback-sheet');
+  const btnOpen  = document.getElementById('feedback-btn');
+  const btnClose = document.getElementById('feedback-close');
+  const btnSubmit= document.getElementById('feedback-submit');
+  const input    = document.getElementById('feedback-input');
+  const preview  = document.getElementById('feedback-preview');
+  const status   = document.getElementById('feedback-status');
+
+  // ── 開關 ──────────────────────────────────────────
+  function openSheet() {
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    input.focus();
+  }
+  function closeSheet() {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  btnOpen.addEventListener('click', openSheet);
+  btnClose.addEventListener('click', closeSheet);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeSheet(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+
+  // ── 解析器（沿用合併工具邏輯）────────────────────
+  function parsePlainText(text) {
+    if (!text.trim()) return null;
+    const lines = text.split(/\r?\n/);
+    const blocks = [];
+    let cur = [];
+    for (const line of lines) {
+      if (line.trim() === '') {
+        if (cur.length) { blocks.push(cur); cur = []; }
+      } else {
+        cur.push(line.trim());
+      }
+    }
+    if (cur.length) blocks.push(cur);
+    if (blocks.length === 0) return null;
+
+    const firstLine = blocks[0][0];
+    const isQFormat = /^\d+[\.\s、)）]/.test(firstLine);
+    let title = '';
+    let startIdx = 0;
+    if (!isQFormat) {
+      title = firstLine.replace(/^課程名稱[:：\s]*/i, '');
+      startIdx = 1;
+    }
+
+    const questions = [];
+    for (let b = startIdx; b < blocks.length; b++) {
+      const block = blocks[b];
+      if (!block.length) continue;
+      const qText = block[0].replace(/^\d+[\.\s、)）]+/, '');
+      const q = { q: qText, list: [] };
+      for (let j = 1; j < block.length; j++) {
+        const ansIdx = q.list.length + 1;
+        q.list.push({ ['答案' + ansIdx]: block[j] });
+      }
+      questions.push(q);
+    }
+    if (!questions.length) return null;
+    return { subject: { title, list: questions } };
+  }
+
+  // ── 預覽渲染 ───────────────────────────────────────
+  function renderPreview(parsed) {
+    if (!parsed) { preview.innerHTML = ''; return; }
+    const { title, list } = parsed.subject;
+    let html = `<div class="preview-card">`;
+    html += `<div class="preview-title">📚 ${title || '（未偵測到主題）'}</div>`;
+    list.slice(0, 5).forEach((q, i) => {
+      html += `<div class="preview-q"><span class="preview-q-num">Q${i + 1}</span>${q.q}</div>`;
+      q.list.forEach(opt => {
+        const val = Object.values(opt)[0];
+        const isCorrect = val.startsWith('*');
+        const label = isCorrect ? val.slice(1) : val;
+        html += `<div class="preview-opt ${isCorrect ? 'correct' : ''}">${label}</div>`;
+      });
+    });
+    if (list.length > 5) {
+      html += `<div class="preview-count">⋯ 共 ${list.length} 題（僅顯示前 5 題）</div>`;
+    } else {
+      html += `<div class="preview-count">共 ${list.length} 題</div>`;
+    }
+    html += `</div>`;
+    preview.innerHTML = html;
+  }
+
+  // ── 即時解析 ───────────────────────────────────────
+  let parsed = null;
+  let debounceTimer = null;
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const text = input.value.trim();
+      if (!text) {
+        parsed = null;
+        preview.innerHTML = '';
+        btnSubmit.disabled = true;
+        setStatus('');
+        return;
+      }
+      try {
+        parsed = parsePlainText(text);
+      } catch {
+        parsed = null;
+      }
+
+      if (parsed) {
+        renderPreview(parsed);
+        setStatus('✅ 解析成功', 'ok');
+      } else {
+        preview.innerHTML = `<div class="preview-warn">⚠️ 無法自動解析，送出後將由人工判斷</div>`;
+        setStatus('⚠️ 人工判斷', 'warn');
+      }
+      btnSubmit.disabled = false;
+    }, 350);
+  });
+
+  // ── 送出 ────────────────────────────────────────────
+  btnSubmit.addEventListener('click', async () => {
+    const rawText = input.value.trim();
+    if (!rawText) return;
+
+    // Honeypot（隱藏欄位，不存在於 DOM，值固定為空）
+    const payload = {
+      _hp: '',
+      topic: parsed?.subject?.title || '',
+      status: parsed ? '已解析' : '人工判斷',
+      raw: rawText,
+      json: parsed ? JSON.stringify(parsed) : '',
+    };
+
+    btnSubmit.disabled = true;
+    btnSubmit.classList.add('sending');
+    btnSubmit.textContent = '送出中…';
+    setStatus('送出中…');
+
+    try {
+        const form = new FormData();
+		form.append('data', JSON.stringify(payload));
+
+		const res = await fetch(GAS_URL, {
+		  method: 'POST',
+		  mode: 'no-cors',
+		  body: form,
+		});
+		// no-cors 無法讀取 response，直接視為成功
+		setStatus('✅ 已送出，謝謝！', 'ok');
+		btnSubmit.textContent = '已送出 ✓';
+		setTimeout(() => {
+		  closeSheet();
+		  input.value = '';
+		  preview.innerHTML = '<div class="preview-empty">貼上內容後自動顯示</div>';
+		  parsed = null;
+		  btnSubmit.textContent = '送出';
+		  btnSubmit.disabled = true;
+		  setStatus('');
+		}, 1800);
+    } catch (err) {
+      setStatus('❌ 送出失敗，請稍後再試', 'err');
+      btnSubmit.disabled = false;
+      btnSubmit.classList.remove('sending');
+      btnSubmit.textContent = '送出';
+    }
+  });
+
+  function setStatus(msg, cls = '') {
+    status.textContent = msg;
+    status.className = cls;
+  }
 })();
 </script>
 </body>
