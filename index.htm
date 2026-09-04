@@ -398,7 +398,8 @@ $(document).ready(function(e){
 	const target = document.querySelector('body');
 	target.addEventListener('paste', (event) => {
 		// 如果 popup 顯示中，不劫走
-		if (document.getElementById('auth-overlay').style.display !== 'none') return;
+		//if (document.getElementById('auth-overlay').style.display !== 'none') return;
+		if (getComputedStyle(document.getElementById('auth-overlay')).display !== 'none') return;
 		event.preventDefault();
 		var isInputFocused = $('input, textarea, [contenteditable="true"]').is(':focus');
 		let paste = (event.clipboardData || window.clipboardData).getData('text');
