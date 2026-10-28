@@ -1,85 +1,77 @@
+const VERSION = 'v202610280952';
 const CACHE_PREFIX = 'elearning-';
-let CACHE_NAME = CACHE_PREFIX + 'v1'; // 預設值，啟動後會更新
+const CACHE_NAME = CACHE_PREFIX + VERSION;
 
 const FILES = [
   './index.htm',
-  './manifest.json',
-  './version.json'
+  './manifest.json'
 ];
 
 self.addEventListener('install', event => {
+  console.log('[SW] install:', VERSION);
+
+  // 新 SW 安裝完成後，不等待舊 SW 結束
+  self.skipWaiting();
+
   event.waitUntil(
-    fetch('./version.json')
-      .then(r => r.json())
-      .then(({ version }) => {
-        CACHE_NAME = CACHE_PREFIX + version;
-        return caches.open(CACHE_NAME).then(cache => cache.addAll(FILES));
-      })
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(FILES))
   );
 });
 
 self.addEventListener('activate', event => {
+  console.log('[SW] activate:', VERSION);
+
   event.waitUntil(
-    fetch('./version.json')
-      .then(r => r.json())
-      .then(({ version }) => {
-        CACHE_NAME = CACHE_PREFIX + version;
-        return Promise.all([
-          clients.claim(),
-          caches.keys().then(keys =>
-            Promise.all(
-              keys.filter(key => key !== CACHE_NAME)
-                  .map(key => caches.delete(key))
+    caches.keys()
+      .then(keys =>
+        Promise.all(
+          keys
+            .filter(key =>
+              key.startsWith(CACHE_PREFIX) &&
+              key !== CACHE_NAME
             )
-          )
-        ]);
-      })
+            .map(key => caches.delete(key))
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
-
-  // 排除非 http/https 請求
   if (!event.request.url.startsWith('http')) return;
   if (event.request.method !== 'GET') return;
-  
-  // version.json 永遠去網路拿，並檢查版本
+
+  // version.json 永遠走網路
   if (event.request.url.includes('version.json')) {
     event.respondWith(
-      fetch(event.request).then(response => {
-        const responseClone = response.clone();
-        responseClone.json().then(({ version }) => {
-          const newCacheName = CACHE_PREFIX + version;
-          if (newCacheName !== CACHE_NAME) {
-            // 版本不同，強制重新安裝 SW
-            CACHE_NAME = newCacheName;
-            self.registration.update();
-          }
-        });
-        return response;
-      })
+      fetch(event.request, { cache: 'no-store' })
     );
     return;
   }
-  
+
   event.respondWith(
-    caches.match(event.request).then(res => {
+    caches.match(event.request)
+      .then(res => {
+        if (res) {
+          return res;
+        }
 
-      if (res) {
-		return res;
-	  }
+        return fetch(event.request)
+          .then(response => {
+            if (!response || response.status !== 200) {
+              return response;
+            }
 
-      // 沒有快取，去網路拿，拿到後存起來
-      return fetch(event.request).then(response => {
-        if (!response || response.status !== 200) return response;
+            const responseClone = response.clone();
 
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, responseClone);
-        });
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseClone);
+              });
 
-        return response;
-      });
-    })
+            return response;
+          });
+      })
   );
 });
