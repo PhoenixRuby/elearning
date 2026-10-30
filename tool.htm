@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>JSON / 純文字 → 合併去重 (A+B=merged)</title>
+  <style>
+:root{--bg-primary:#0d1117;--bg-secondary:#161b22;--bg-tertiary:#010409;--border-color:#30363d;--text-primary:#c9d1d9;--text-secondary:#8b949e;--text-highlight:#58a6ff;--accent-color:#58a6ff;--accent-hover:#1f6feb;--button-bg:#21262d;--button-hover:#30363d;--scrollbar-thumb:#30363d;--scrollbar-hover:#484f58;--shadow:rgba(0, 0, 0, 0.3)}
+[data-theme="light"]{--bg-primary:#ffffff;--bg-secondary:#f6f8fa;--bg-tertiary:#f0f3f6;--border-color:#d0d7de;--text-primary:#24292f;--text-secondary:#57606a;--text-highlight:#0969da;--accent-color:#0969da;--accent-hover:#0550ae;--button-bg:#f6f8fa;--button-hover:#eaeef2;--scrollbar-thumb:#d0d7de;--scrollbar-hover:#afb8c1;--shadow:rgba(0, 0, 0, 0.1)}
+body{font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;background:var(--bg-primary);color:var(--text-primary);margin:0;line-height:1.5;transition:background 0.3s ease, color 0.3s ease;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.main-container{display:flex;flex:1;overflow:hidden;position:relative}
+.left-content{flex:1;display:flex;flex-direction:column;overflow:hidden;width:100%}
+.history-panel{width:280px;background:var(--bg-secondary);border-left:1px solid var(--border-color);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width 0.3s ease}
+.history-panel.hidden{width:0;border-left:none}
+.history-toggle{background:var(--button-bg);color:var(--text-primary);border:1px solid var(--border-color);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px;transition:all 0.2s ease;white-space:nowrap;margin:0}
+.history-toggle:hover{background:var(--button-hover);border-color:var(--accent-color)}
+#themeToggle{position:fixed;top:16px;right:16px;background:var(--button-bg);color:var(--text-primary);border:1px solid var(--border-color);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:20px;transition:all 0.2s ease;z-index:100;box-shadow:0 2px 8px var(--shadow)}
+#themeToggle:hover{background:var(--button-hover);border-color:var(--text-secondary)}
+.history-header{padding:12px 16px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center}
+.history-header h3{margin:0;font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.03em}
+.history-clear{background:transparent;color:var(--text-secondary);border:none;padding:4px 8px;font-size:11px;cursor:pointer;border-radius:4px;transition:all 0.2s ease;margin:0}
+.history-clear:hover{background:var(--button-hover);color:var(--text-primary)}
+.history-list{flex:1;overflow-y:auto;padding:8px}
+.history-item{background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all 0.2s ease}
+.history-item:hover{background:var(--bg-tertiary);border-color:var(--accent-color);transform:translateX(-2px)}
+.history-item.active{border-color:var(--accent-color);background:var(--bg-tertiary)}
+.history-time{font-size:11px;color:var(--text-secondary);margin-bottom:4px}
+.history-info{font-size:12px;color:var(--text-primary);line-height:1.4}
+.history-stats{font-size:11px;color:var(--text-highlight);margin-top:4px;font-family:'SF Mono', 'Monaco', 'Consolas', monospace}
+header{background:var(--bg-secondary);padding:16px 24px;padding-right:94px;border-bottom:1px solid var(--border-color);box-shadow:0 1px 3px var(--shadow)}
+.header-content{display:flex;flex-direction:column;gap:8px}
+.title-row{display:flex;align-items:center;gap:12px;width:100%}
+.title-input-group{display:flex;align-items:center;gap:8px;flex:1}
+h1{margin:0;font-size:18px;font-weight:600;letter-spacing:-0.01em;color:var(--text-primary);white-space:nowrap}
+label{font-size:13px;font-weight:500;color:var(--text-secondary);white-space:nowrap}
+#titleInput{flex:1;font-size:14px;padding:10px 12px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-highlight);font-family:'SF Mono', 'Monaco', 'Consolas', monospace;transition:border-color 0.2s ease, box-shadow 0.2s ease}
+#titleInput:focus{outline:none;border-color:var(--accent-color);box-shadow:0 0 0 3px rgba(88, 166, 255, 0.15)}
+.split-container{display:flex;width:100%;height:300px;border-bottom:1px solid var(--border-color);background:var(--bg-tertiary);flex-shrink:0}
+.output-section{padding:12px;overflow-y:auto;flex:1}
+.output-section::-webkit-scrollbar{width:8px}
+.output-section::-webkit-scrollbar-track{background:var(--bg-primary)}
+.output-section::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:4px}
+.output-section::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-hover)}
+.pane{flex:1;display:flex;flex-direction:column;padding:16px;gap:8px}
+.pane h3{margin:0;font-size:14px;color:var(--text-secondary)}
+.divider{width:4px;cursor:col-resize;background:var(--button-bg);transition:background 0.2s ease}
+.divider:hover{background:var(--accent-color)}
+.divider:active{background:var(--accent-hover)}
+.info{font-size:12px;margin-top:6px;color:var(--text-secondary);font-weight:400}
+button{background:var(--button-bg);color:var(--text-primary);border:1px solid var(--border-color);border-radius:6px;padding:8px 16px;cursor:pointer;margin-right:8px;font-size:13px;font-weight:500;transition:all 0.2s ease;position:relative}
+button:hover{background:var(--button-hover);border-color:var(--text-secondary)}
+button:active{background:var(--bg-secondary);transform:translateY(1px)}
+button.success::after{content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);font-size:18px;color:#3fb950;animation:checkmark 0.3s ease}
+@keyframes checkmark{0%{opacity:0;transform:translate(-50%, -50%) scale(0.5)}50%{opacity:1;transform:translate(-50%, -50%) scale(1.2)}100%{opacity:1;transform:translate(-50%, -50%) scale(1)}}
+button.success{color:transparent}
+.status{font-size:13px;margin-top:8px;font-weight:500;min-height:20px}
+.ok{color:#3fb950}
+.err{color:#f85149}
+.warn{color:#d29922}
+textarea, #output{flex:1;min-width:0;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:6px;padding:12px;resize:none;font-family:'SF Mono','Monaco','Consolas',monospace;font-size:13px;line-height:1.6;transition:border-color 0.2s ease,box-shadow 0.2s ease}
+textarea:focus,#output:focus{outline:none;border-color:var(--accent-color);box-shadow:0 0 0 3px rgba(88,166,255,0.15)}
+#output{width:100%;min-height:200px;resize:vertical;box-sizing:border-box}
+textarea::-webkit-scrollbar,#output::-webkit-scrollbar,.history-list::-webkit-scrollbar{width:8px;height:8px}
+textarea::-webkit-scrollbar-track,#output::-webkit-scrollbar-track,.history-list::-webkit-scrollbar-track{background:var(--bg-primary)}
+textarea::-webkit-scrollbar-thumb,#output::-webkit-scrollbar-thumb,.history-list::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:4px}
+textarea::-webkit-scrollbar-thumb:hover,#output::-webkit-scrollbar-thumb:hover,.history-list::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-hover)}
+.processing{color:var(--accent-color);font-style:italic}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>A + B + C → 合併 (支援 JSON 與純文字)</h1>
+      <div class="title-row">
+        <div class="title-input-group">
+          <label for="titleInput">標題：</label>
+          <input id="titleInput" type="text" placeholder="自動擷取或自行輸入" aria-label="標題輸入">
+        </div>
+        <button class="history-toggle" id="historyToggle" title="顯示/隱藏操作歷史">📋 操作歷史</button>
+      </div>
+    </div>
+  </header>
+
+  <button id="themeToggle" title="切換主題" aria-label="切換主題">🌙</button>
+
+  <div class="main-container" id="mainContainer">
+    <div class="left-content" id="leftContent">
+      <div class="split-container">
+        <div class="pane" id="paneA">
+          <h3>輸入 A</h3>
+          <textarea id="inputA" placeholder="貼上 JSON 或純文字題庫..." aria-label="輸入 A"></textarea>
+          <div id="infoInputA" class="info">題組數: 0</div>
+        </div>
+        <div class="divider"></div>
+        <div class="pane" id="paneB">
+          <h3>輸入 B</h3>
+          <textarea id="inputB" placeholder="貼上 JSON 或純文字題庫..." aria-label="輸入 B"></textarea>
+          <div id="infoInputB" class="info">題組數: 0</div>
+        </div>
+		<!--
+        <div class="divider"></div>
+        <div class="pane" id="paneC">
+          <h3>輸入 C</h3>
+          <textarea id="inputC" placeholder="貼上 JSON 或純文字題庫..." aria-label="輸入 C"></textarea>
+          <div id="infoInputC" class="info">題組數: 0</div>
+        </div>
+		-->
+      </div>
+
+      <div style="padding:12px; border-bottom: 1px solid var(--border-color);">
+        <button id="btnDownload" aria-label="下載 merged.json">下載 merged.json</button>
+        <button id="btnCopy" aria-label="複製 合併結果">複製 合併結果</button>
+        <button id="btnCopyMin" aria-label="複製 合併結果(無格式)">複製 合併結果(無格式)</button>
+        <div id="status" class="status"></div>
+        <div id="infoMerged" class="info"></div>
+      </div>
+
+      <div class="output-section">
+        <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-secondary);">輸出 (可手動修改)</h3>
+        <textarea id="output" placeholder="合併結果將顯示在此..." aria-label="輸出"></textarea>
+      </div>
+    </div>
+
+    <div class="history-panel hidden" id="historyPanel">
+      <div class="history-header">
+        <h3>操作歷史</h3>
+        <button class="history-clear" id="btnClearHistory">清空</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 12px;">
+          尚無操作記錄
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const inputIds = ['inputA', 'inputB'];//, 'inputC'];
+  const infoIds = ['infoInputA', 'infoInputB'];//, 'infoInputC'];
+  const MIN_PANE = 60;
+  const DIVIDER_WIDTH = 4;
+  const PANEL_WIDTH = 280;
+
+  // ---------- 合併器 ----------
+  class Merger {
+    constructor() {
+      this.MAX_TEXT_LENGTH = 1e6;
+    }
+
+    safeParseJson(text) {
+      if (text.length > this.MAX_TEXT_LENGTH) throw new Error('輸入過長 (超過 1MB)');
+      try { return JSON.parse(text); } catch { return null; }
+    }
+
+    parsePlainText_old(text) {
+      if (!text.trim()) return null;
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length === 0) return null;
+
+      const questions = [];
+      let startIdx = 0;
+      let title = "";
+
+      // 檢查第一行是否為標題（不是題目格式）
+      const firstLine = lines[0].trim();
+      const isQuestionFormat = /^\d+[\.\s、)）]/.test(firstLine);
+      
+      if (!isQuestionFormat) {
+        title = firstLine.replace(/^課程名稱[:：\s]*/i, "");
+        startIdx = 1;
+      }
+
+      // 解析題目和答案
+      for (let i = startIdx; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // 判斷是否為新題目（以數字開頭）
+        const isNewQuestion = /^\d+[\.\s、)）]/.test(line);
+        
+        if (isNewQuestion) {
+          // 這是一個新題目
+          const qText = line.replace(/^\d+[\.\s、)）]+/, "");
+          questions.push({ q: qText, list: [] });
+        } else if (questions.length > 0) {
+          // 這是答案，加入到最後一個題目
+          const lastQ = questions[questions.length - 1];
+          const ansIndex = lastQ.list.length + 1;
+          lastQ.list.push({ ["答案" + ansIndex]: line });
+        }
+      }
+
+      return { subject: { title, list: questions } };
+    }
+	
+	parsePlainText(text) {
+  if (!text.trim()) return null;
+  const lines = text.split(/\r?\n/);
+  if (lines.length === 0) return null;
+
+  const questions = [];
+  let title = "";
+
+  // 建構 blocks：以空行分隔的群組
+  const blocks = [];
+  let currentBlock = [];
+  for (let i = 0; i < lines.length; i++) {
+    const stripped = lines[i].trim();
+    if (stripped === '') {
+      if (currentBlock.length > 0) {
+        blocks.push(currentBlock);
+        currentBlock = [];
+      }
+    } else {
+      currentBlock.push(stripped);
+    }
+  }
+  if (currentBlock.length > 0) {
+    blocks.push(currentBlock);
+  }
+
+  if (blocks.length === 0) return null;
+
+  // 檢查第一個 block 是否為標題（不是題目格式）
+  const firstBlock = blocks[0];
+  const firstLine = firstBlock[0];
+  const isQuestionFormat = /^\d+[\.\s、)）]/.test(firstLine);
+  
+  let startBlockIdx = 0;
+  if (!isQuestionFormat) {
+    title = firstLine.replace(/^課程名稱[:：\s]*/i, "");
+    startBlockIdx = 1;
+  }
+
+  // 解析每個後續 block 為題目 + 答案
+  for (let b = startBlockIdx; b < blocks.length; b++) {
+    const block = blocks[b];
+    if (block.length === 0) continue;
+
+    // 第一行為題目，移除數字開頭如果有
+    const qLine = block[0];
+    const qText = qLine.replace(/^\d+[\.\s、)）]+/, "");
+    const newQuestion = { q: qText, list: [] };
+
+    // 其餘行為答案
+    for (let j = 1; j < block.length; j++) {
+      const ansLine = block[j];
+      const ansIndex = newQuestion.list.length + 1;
+      newQuestion.list.push({ ["答案" + ansIndex]: ansLine });
+    }
+
+    questions.push(newQuestion);
+  }
+
+  return { subject: { title, list: questions } };
+}
+
+    normalizeInput(text) {
+      if (text.length > this.MAX_TEXT_LENGTH) throw new Error('輸入過長 (超過 1MB)');
+      let obj = this.safeParseJson(text);
+      if (obj) return obj;
+      return this.parsePlainText(text);
+    }
+
+    dedupeAnswers(listA = [], listB = []) {
+      const seen = new Set(), out = [];
+      [...listA, ...listB].forEach(item => {
+        const key = JSON.stringify(item);
+        if (!seen.has(key)) { seen.add(key); out.push(item); }
+      });
+      return out;
+    }
+
+    mergeInputs(inputs, overrideTitle) {
+      const subjs = inputs.filter(i => i).map(i => i.subject || { title: "", list: [] });
+      // 決定標題
+      let title;
+      if (overrideTitle && overrideTitle.trim()) {
+        title = overrideTitle.trim();
+      } else {
+        const titles = subjs.map(s => (s.title || "").trim()).filter(t => t);
+        if (titles.length === 0) {
+          title = "未命名題庫";
+        } else {
+          const uniqueTitles = [...new Set(titles)];
+          title = uniqueTitles.length === 1 ? uniqueTitles[0] : uniqueTitles.join(" + ");
+        }
+      }
+      // 合併題目（同 q 合併答案並去重）
+      const map = new Map();
+      const add = (qObj) => {
+        const key = qObj.q;
+        if (!map.has(key)) map.set(key, { q: qObj.q, list: [...qObj.list] });
+        else {
+          const exist = map.get(key);
+          exist.list = this.dedupeAnswers(exist.list, qObj.list);
+        }
+      };
+      subjs.forEach(s => s.list.forEach(add));
+
+      return { subject: { title, list: [...map.values()] } };
+    }
+  }
+
+  const merger = new Merger();
+  // ---------- 歷史管理 ----------
+  class HistoryManager {
+    constructor(maxSize = 10) {
+      this.maxSize = maxSize;
+      this.history = [];
+      this.currentIndex = -1;
+      this.loadFromStorage();
+    }
+
+    add(snapshot) {
+      if (this.currentIndex < this.history.length - 1) {
+        this.history = this.history.slice(0, this.currentIndex + 1);
+      }
+
+      this.history.push({
+        ...snapshot,
+        timestamp: Date.now(),
+        id: Date.now() + Math.random()
+      });
+
+      if (this.history.length > this.maxSize) {
+        this.history.shift();
+      }
+
+      this.currentIndex = this.history.length - 1;
+      this.saveToStorage();
+      this.render();
+    }
+
+    restore(index) {
+      if (index < 0 || index >= this.history.length) return;
+      this.currentIndex = index;
+      const snapshot = this.history[index];
+      
+      inputIds.forEach((id, i) => {
+        const key = `input${String.fromCharCode(65 + i)}`;
+        $(id).value = snapshot[key] || '';
+      });
+      $("output").value = snapshot.output || '';
+      $("titleInput").value = snapshot.title || '';
+      
+      this.render();
+      autoSave();
+    }
+
+    clear() {
+      this.history = [];
+      this.currentIndex = -1;
+      this.saveToStorage();
+      this.render();
+    }
+
+    saveToStorage() {
+      try {
+        localStorage.setItem('history', JSON.stringify(this.history));
+        localStorage.setItem('historyIndex', this.currentIndex);
+      } catch (e) {
+        console.warn('無法儲存歷史記錄', e);
+      }
+    }
+
+    loadFromStorage() {
+      try {
+        const saved = localStorage.getItem('history');
+        if (saved) {
+          this.history = JSON.parse(saved);
+          this.currentIndex = parseInt(localStorage.getItem('historyIndex') || '-1');
+        }
+      } catch (e) {
+        console.warn('無法載入歷史記錄', e);
+      }
+    }
+
+    render() {
+      const list = $("historyList");
+      if (this.history.length === 0) {
+        list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 12px;">尚無操作記錄</div>';
+        return;
+      }
+
+      list.innerHTML = this.history.map((item, index) => {
+        const time = new Date(item.timestamp);
+        const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
+        const isActive = index === this.currentIndex;
+        
+        return `
+          <div class="history-item ${isActive ? 'active' : ''}" data-index="${index}">
+            <div class="history-time">${timeStr}</div>
+            <div class="history-info">${item.title || '未命名題庫'}</div>
+            <div class="history-stats">${item.stats || ''}</div>
+          </div>
+        `;
+      }).reverse().join('');
+
+      list.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const index = parseInt(el.dataset.index);
+          this.restore(index);
+        });
+      });
+    }
+  }
+
+  const historyManager = new HistoryManager(10);
+
+  // 歷史面板切換 —— 僅此段修正（其餘邏輯維持不變）
+  const historyPanel = $('historyPanel');
+  const historyToggle = $('historyToggle');
+  let isPanelOpen = localStorage.getItem('historyPanelOpen') === 'true';
+  let __savedPaneWidths = null;
+  // ---------- 歷史面板借寬演算法 ----------
+  function __snap(panes){ return panes.map(p=>parseFloat(p.style.width)||p.getBoundingClientRect().width); }
+  function __apply(panes, widths){ panes.forEach((p,i)=>{ const w=Math.max(MIN_PANE,Math.round(widths[i])); p.style.flex='0 0 auto'; p.style.width=`${w}px`; p.style.boxSizing='border-box'; }); }
+  function __giveable(widths){ return widths.reduce((s,w)=> s + Math.max(0, w - MIN_PANE), 0); }
+  function __borrowRight(widths,need){ for(let i=widths.length-1;i>=0&&need>0;i--){ const can=Math.max(0,widths[i]-MIN_PANE); if(!can)continue; const g=Math.min(can,need); widths[i]-=g; need-=g; } return need; }
+
+  function updatePanelState() {
+    const splitContainer = document.querySelector('.split-container');
+    const panes = splitContainer ? Array.from(splitContainer.querySelectorAll('.pane')) : [];
+    if(!splitContainer || panes.length === 0) return;
+
+    // 凍結當前寬度（避免 flex 重新分配）
+    panes.forEach(p=>{
+      const w = parseFloat(p.style.width) || p.getBoundingClientRect().width;
+      p.style.flex='0 0 auto'; p.style.width=w+'px'; p.style.boxSizing='border-box';
+    });
+
+    if (isPanelOpen) {
+      const widths = __snap(panes);
+      __savedPaneWidths = widths.slice();
+
+      const want = PANEL_WIDTH;
+      const can = __giveable(widths);
+      const actual = Math.min(want, can);
+
+      historyPanel.classList.remove('hidden');
+      historyPanel.style.width = actual + 'px';
+
+      __borrowRight(widths, actual);
+      __apply(panes, widths);
+
+      historyToggle.textContent = '✕ 關閉歷史';
+    } else {
+      historyPanel.classList.add('hidden');
+      historyPanel.style.width = ''; // 還原 CSS 控制
+
+      if(__savedPaneWidths) __apply(panes, __savedPaneWidths);
+      __savedPaneWidths = null;
+
+      historyToggle.textContent = '📋 操作歷史';
+    }
+
+    localStorage.setItem('historyPanelOpen', isPanelOpen);
+  }
+
+  historyToggle.addEventListener('click', () => {
+    isPanelOpen = !isPanelOpen;
+    updatePanelState();
+  });
+
+  // 按鈕成功動畫
+  function showButtonSuccess(buttonId) {
+    const btn = $(buttonId);
+    const originalText = btn.textContent;
+    btn.classList.add('success');
+    setTimeout(() => {
+      btn.classList.remove('success');
+    }, 300);
+  }
+
+  function debounce(fn, delay) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
+  let isInitialLoad = true;
+
+  function updateAndAutoOutput(){
+    const statusEl = $("status");
+    statusEl.textContent = "🔄 處理中...";
+    statusEl.className = "status processing";
+
+    try {
+      const texts = inputIds.map(id => $(id).value);
+      const subjs = texts.map(text => merger.normalizeInput(text));
+      const counts = subjs.map(s => s?.subject?.list?.length || 0);
+
+      infoIds.forEach((id, i) => {
+        $(id).textContent = `題組數: ${counts[i]}`;
+      });
+
+      let newTitle = "";
+      const titles = subjs.map(s => (s?.subject?.title || "").trim()).filter(t => t);
+      if (titles.length === 0) {
+        newTitle = "未命名題庫";
+      } else {
+        const uniqueTitles = [...new Set(titles)];
+        newTitle = uniqueTitles.length === 1 ? uniqueTitles[0] : uniqueTitles.join(" + ");
+      }
+      $("titleInput").value = newTitle;
+
+      if (subjs.some(s => s)) {
+        doMerge(subjs, newTitle);
+      } else {
+        $("output").value = "";
+        $("infoMerged").textContent = "";
+        statusEl.textContent = "";
+      }
+    }catch(e){
+      statusEl.textContent = "❌ " + e.message;
+      statusEl.className = "status err";
+      $("infoMerged").textContent = "";
+    }
+  }
+
+  function doMerge(subjs, titleOverride){
+    try {
+      const userTitle = $("titleInput").value || titleOverride;
+      const inputs = subjs.filter(s => s);
+      const merged = merger.mergeInputs(inputs, userTitle);
+
+      $("output").value = JSON.stringify(merged, null, 2);
+      $("status").textContent = "✅ 自動輸出完成";
+      $("status").className = "status ok";
+      $("titleInput").value = merged.subject.title;
+
+      const counts = inputs.map(i => i.subject?.list?.length || 0);
+      const totalIn = counts.reduce((s, x) => s + x, 0);
+      const countOut = merged.subject?.list?.length || 0;
+      const duplicates = totalIn - countOut;
+      const statsText = `${counts.join(' + ')} = ${countOut}, 重複 ${duplicates}`;
+      $("infoMerged").textContent = statsText;
+
+      if (!isInitialLoad){
+        const snapshot = {
+          output: $("output").value,
+          title: merged.subject.title,
+          stats: statsText
+        };
+        inputIds.forEach((id, i) => {
+          const key = `input${String.fromCharCode(65 + i)}`;
+          snapshot[key] = $(id).value;
+        });
+        historyManager.add(snapshot);
+      }
+    } catch (e) {
+      $("status").textContent = "❌ " + e.message;
+      $("status").className = "status err";
+      $("infoMerged").textContent = "";
+    }
+  }
+
+  function autoSave() {
+    inputIds.forEach(id => localStorage.setItem(id, $(id).value));
+    localStorage.setItem('output', $("output").value);
+    localStorage.setItem('titleInput', $("titleInput").value);
+  }
+
+  // ---------- 主題切換（單一定義） ----------
+  const themeToggle = $("themeToggle");
+  const getSystemTheme = () => window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  let savedTheme = localStorage.getItem("theme") || getSystemTheme();
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  themeToggle.textContent = savedTheme === "dark" ? "🌙" : "☀️";
+
+  themeToggle.addEventListener("click", () => {
+    const currentTheme = document.documentElement.getAttribute("data-theme");
+    const newTheme = currentTheme === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", newTheme);
+    localStorage.setItem("theme", newTheme);
+    themeToggle.textContent = newTheme === "dark" ? "🌙" : "☀️";
+  });
+
+  const debouncedUpdate = debounce(updateAndAutoOutput, 300);
+  inputIds.forEach(id => $(id).addEventListener("input", debouncedUpdate));
+  $("titleInput").addEventListener("input", (e) => {
+    if ($("output").value.trim()) {
+      const texts = inputIds.map(id => $(id).value);
+      const subjs = texts.map(text => merger.normalizeInput(text));
+      doMerge(subjs, e.target.value);
+    }
+  });
+
+  // ---------- 歷史面板 UI ----------
+  $("btnClearHistory").onclick = () => {
+    if (confirm('確定要清空所有操作記錄嗎？')) {
+      historyManager.clear();
+    }
+  };
+
+  // ---------- 下載 / 複製 ----------								  
+  $("btnDownload").onclick = () => {
+    if (!$("output").value.trim()) {
+      $("status").textContent = "⚠️ 沒有輸出";
+      $("status").className = "status warn";
+      setTimeout(() => { $("status").textContent = ""; }, 2000);
+      return;
+    }
+    const blob = new Blob([$("output").value], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "merged.json";
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showButtonSuccess("btnDownload");
+  };
+
+  $("btnCopy").onclick = async () => {
+    if (!$("output").value.trim()) {
+      $("status").textContent = "⚠️ 沒有可複製的內容";
+      $("status").className = "status warn";
+      setTimeout(() => { $("status").textContent = ""; }, 2000);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText($("output").value);
+      showButtonSuccess("btnCopy");
+    } catch (e) {
+      $("status").textContent = "❌ 複製失敗: " + e.message;
+      $("status").className = "status err";
+      setTimeout(() => { $("status").textContent = ""; }, 2000);
+    }
+  };
+
+  $("btnCopyMin").onclick = async () => {
+    if (!$("output").value.trim()) {
+      $("status").textContent = "⚠️ 沒有可複製的內容";
+      $("status").className = "status warn";
+      setTimeout(() => { $("status").textContent = ""; }, 2000);
+      return;
+    }
+    try {
+      const json = JSON.parse($("output").value);
+      await navigator.clipboard.writeText(JSON.stringify(json));
+      showButtonSuccess("btnCopyMin");
+    } catch (e) {
+      $("status").textContent = "❌ 複製失敗: " + e.message;
+      $("status").className = "status err";
+      setTimeout(() => { $("status").textContent = ""; }, 2000);
+    }
+  };
+  // ---------- 拖曳分割線 ----------
+  let drag = null;
+  // ---------- 鎖定當前 row（避免 flex 重新分配） ----------
+  const lockRow = parent => {
+    if (getComputedStyle(parent).display !== 'flex') parent.classList.add('panes-row');
+    [...parent.children].forEach(el => {
+      if (el.classList?.contains('pane')) {
+        const w = parseFloat(el.style.width) || el.getBoundingClientRect().width;
+        Object.assign(el.style, { flex: '0 0 auto', width: `${w}px`, boxSizing: 'border-box' });
+      } else if (el.classList?.contains('divider')) {
+        Object.assign(el.style, { flex: '0 0 4px', width: '4px' });
+      }
+    });
+  };
+
+  const updateWidths = (drag) => {
+    const delta = drag.currentX - drag.startX;
+    let newLeft = drag.l0 + delta, newRight = drag.r0 - delta;
+    const { min, total, dividerW } = drag;
+    if (newLeft < min) { newLeft = min; newRight = total - dividerW - newLeft; }
+    else if (newLeft > total - dividerW - min) { newLeft = total - dividerW - min; newRight = total - dividerW - newLeft; }
+    Object.assign(drag.left.style, { width: `${newLeft}px` });
+    Object.assign(drag.right.style, { width: `${newRight}px` });
+    drag.rafId = null;
+  };
+
+  ['mousedown', 'mousemove', 'mouseup'].forEach(type => {
+    document.addEventListener(type, e => {
+      if (type === 'mouseup') {
+        if (drag) {
+          if (drag.rafId) cancelAnimationFrame(drag.rafId);
+          drag = null;
+          Object.assign(document.body.style, { cursor: 'default', userSelect: '' });
+        }
+        return;
+      }
+
+      if (type === 'mousedown') {
+        const dividerEl = e.target.closest('.divider');
+        if (!dividerEl || !dividerEl.previousElementSibling || !dividerEl.nextElementSibling) return;
+
+        const [left, right] = [dividerEl.previousElementSibling, dividerEl.nextElementSibling];
+        const parent = dividerEl.parentElement;
+        lockRow(parent);
+
+        const rects = [left, dividerEl, right].map(el => el.getBoundingClientRect());
+        const total = rects.reduce((sum, r) => sum + r.width, 0);
+        const dividerW = rects[1].width;
+        const effMin = Math.min(MIN_PANE, Math.floor((total - dividerW) / 2));
+
+        drag = { 
+          left, right, startX: e.clientX, currentX: e.clientX,
+          l0: rects[0].width, r0: rects[2].width, total, dividerW, min: effMin,
+          rafId: null 
+        };
+        Object.assign(document.body.style, { cursor: 'col-resize', userSelect: 'none' });
+        e.preventDefault();
+        return;
+      }
+
+      if (!drag) return;
+      drag.currentX = e.clientX;
+      if (drag.rafId) return;
+      drag.rafId = requestAnimationFrame(() => updateWidths(drag));
+    });
+  });
+
+  setInterval(autoSave, 5000);
+
+  window.addEventListener('load', () => {
+    inputIds.forEach(id => $(id).value = localStorage.getItem(id) || '');
+    $("output").value = localStorage.getItem('output') || '';
+    $("titleInput").value = localStorage.getItem('titleInput') || '';
+    updateAndAutoOutput();
+    isInitialLoad = false;
+    historyManager.render();
+    updatePanelState();
+  });
+})();
+</script>
+</body>
+</html>
